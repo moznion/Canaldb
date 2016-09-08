@@ -25,7 +25,7 @@ func fetchAllNamespaces(leveldb *leveldb.DB) [][]byte {
 
 	namespaces := make([][]byte, 0)
 	for iter.Next() {
-		ns := copyBytes(bytes.SplitN(iter.Key(), []byte("_"), 4)[3])
+		ns := cloneBytes(bytes.SplitN(iter.Key(), []byte("_"), 4)[3])
 		namespaces = append(namespaces, ns)
 	}
 	return namespaces

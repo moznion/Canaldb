@@ -25,7 +25,7 @@ func getEpochMillis() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
-func copyBytes(src []byte) []byte {
+func cloneBytes(src []byte) []byte {
 	dst := make([]byte, len(src))
 	copy(dst, src)
 	return dst

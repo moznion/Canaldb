@@ -84,7 +84,7 @@ func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, 
 	if edgeJumper() {
 		i++
 		if isUnlimited || i <= num {
-			kvs = append(kvs, KV{copyBytes(iter.Key()), copyBytes(iter.Value())})
+			kvs = append(kvs, KV{cloneBytes(iter.Key()), cloneBytes(iter.Value())})
 		}
 	}
 
@@ -93,7 +93,7 @@ func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, 
 		if !isUnlimited && i > num {
 			break
 		}
-		kvs = append(kvs, KV{copyBytes(iter.Key()), copyBytes(iter.Value())})
+		kvs = append(kvs, KV{cloneBytes(iter.Key()), cloneBytes(iter.Value())})
 	}
 
 	return kvs
