@@ -18,19 +18,16 @@ func NewCanalDB(leveldb *leveldb.DB) *CanalDB {
 	}
 }
 
-func (c *CanalDB) Put(namespace string, value string) (*KV, error) {
+func (c *CanalDB) Put(namespace, value string) (*KV, error) {
 	ckv := c.GetCurrent(namespace)
 	if ckv == nil || string(ckv.Value) != value {
-		var err error
-		err = markNamespace(c.leveldb, namespace)
-		if err != nil {
+		if err := markNamespace(c.leveldb, namespace); err != nil {
 			return nil, err
 		}
 
 		k := makeCurrentKey(namespace)
 		v := []byte(value)
-		err = c.leveldb.Put(k, v, nil)
-		if err != nil {
+		if err := c.leveldb.Put(k, v, nil); err != nil {
 			return nil, err
 		}
 		return &KV{k, v}, nil
@@ -51,7 +48,7 @@ func (c *CanalDB) GetCurrent(namespace string) *KV {
 	return nil
 }
 
-func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, desc bool) []KV {
+func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) []KV {
 	isUnlimited := num < 0
 
 	var kvs []KV
@@ -111,8 +108,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	for iter.Next() {
 		wg.Add(1)
 		go func(key []byte) {
-			err := c.leveldb.Delete(key, nil)
-			if err != nil {
+			if err := c.leveldb.Delete(key, nil); err != nil {
 				accErr = err
 			}
 			wg.Done()
@@ -124,15 +120,13 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	iter.Last()
 	lastValue := iter.Value()
 	if lastValue != nil {
-		err := c.leveldb.Put(makeKey(namespace, boundary), lastValue, nil)
-		if err != nil {
+		if err := c.leveldb.Put(makeKey(namespace, boundary), lastValue, nil); err != nil {
 			return err
 		}
 	}
 
 	iter.Release()
-	err := iter.Error()
-	if err != nil {
+	if err := iter.Error(); err != nil {
 		return err
 	}
 
@@ -150,8 +144,7 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 	for _, namespace := range c.GetNamespaces() {
 		wg.Add(1)
 		go func() {
-			err := c.Trim(string(namespace), boundary)
-			if err != nil {
+			if err := c.Trim(string(namespace), boundary); err != nil {
 				errChan <- err
 			}
 			wg.Done()

@@ -12,8 +12,7 @@ import (
 )
 
 func before(t *testing.T) *leveldb.DB {
-	err := os.RemoveAll("./testdb/")
-	if err != nil {
+	if err := os.RemoveAll("./testdb/"); err != nil {
 		t.Error(err)
 	}
 
