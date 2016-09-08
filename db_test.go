@@ -2,6 +2,7 @@ package canaldb
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -75,5 +76,55 @@ func TestPutWithDuplicatedValue(t *testing.T) {
 	}
 	if cnt != 1 {
 		t.Error("Failed to prohibit duplicated value")
+	}
+}
+
+func TestGetRange(t *testing.T) {
+	leveldb := before(t)
+	defer leveldb.Close()
+
+	db := NewCanalDB(leveldb)
+
+	for i := 1; i <= 5; i++ {
+		time.Sleep(1 * time.Millisecond)
+		db.Put("test-namespace", fmt.Sprintf("%d", i))
+	}
+
+	var kvs []KV
+
+	// ASC
+	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, false)
+	if len(kvs) != 5 {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[0].Value, []byte("1")) {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[4].Value, []byte("5")) {
+		t.Error()
+	}
+
+	// DESC
+	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, true)
+	if len(kvs) != 5 {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[0].Value, []byte("5")) {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[4].Value, []byte("1")) {
+		t.Error()
+	}
+
+	// LIMIT
+	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), 3, false)
+	if len(kvs) != 3 {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[0].Value, []byte("1")) {
+		t.Error()
+	}
+	if !bytes.Equal(kvs[2].Value, []byte("3")) {
+		t.Error()
 	}
 }

@@ -42,39 +42,50 @@ func (c *CanalDB) GetCurrent(namespace string) *KV {
 	return nil
 }
 
-func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, desc bool) []*KV {
-	var start []byte
-	var limit []byte
-	if desc {
-		start = makeKey(namespace, end)
-		limit = makeKey(namespace, begin)
-	} else {
-		start = makeKey(namespace, begin)
-		limit = makeKey(namespace, end)
-	}
-
-	iter := c.leveldb.NewIterator(&util.Range{
-		Start: start,
-		Limit: limit,
-	}, nil)
-
+func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, desc bool) []KV {
 	isUnlimited := num < 0
 
-	i := int64(0)
-	var kvs []*KV
+	var kvs []KV
 	if isUnlimited {
-		kvs = make([]*KV, 100)
+		kvs = make([]KV, 0)
 	} else {
-		kvs = make([]*KV, num)
+		kvs = make([]KV, 0, num)
 	}
 
-	for iter.Next() {
+	end++ // to include in the rarnge
+
+	iter := c.leveldb.NewIterator(&util.Range{
+		Start: makeKey(namespace, begin),
+		Limit: makeKey(namespace, end),
+	}, nil)
+
+	var edgeJumper func() bool
+	var seeker func() bool
+	if desc {
+		edgeJumper = iter.Last
+		seeker = iter.Prev
+	} else {
+		edgeJumper = iter.First
+		seeker = iter.Next
+	}
+
+	i := int64(0)
+
+	if edgeJumper() {
+		i++
+		if isUnlimited || i <= num {
+			kvs = append(kvs, KV{copyBytes(iter.Key()), copyBytes(iter.Value())})
+		}
+	}
+
+	for seeker() {
 		i++
 		if !isUnlimited && i > num {
 			break
 		}
-		kvs = append(kvs, &KV{iter.Key(), iter.Value()})
+		kvs = append(kvs, KV{copyBytes(iter.Key()), copyBytes(iter.Value())})
 	}
+	iter.Release()
 
 	return kvs
 }
