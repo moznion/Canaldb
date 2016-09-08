@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+func makePrefix(identifier string) []byte {
+	return []byte(identifier + "_")
+}
+
 func makeKey(identifier string, timestamp int64) []byte {
 	return []byte(fmt.Sprintf("%s_%d", identifier, timestamp))
 }
@@ -14,7 +18,7 @@ func makeCurrentKey(identifier string) []byte {
 }
 
 func makeOriginKey(identifier string) []byte {
-	return makeKey("%s", 0)
+	return makeKey(identifier, 0)
 }
 
 func getEpochMillis() int64 {

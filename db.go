@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -19,26 +20,26 @@ func NewCanalDB(leveldb *leveldb.DB) *CanalDB {
 
 func (c *CanalDB) Put(namespace string, value string) error {
 	ckv := c.GetCurrent(namespace)
-	if ckv.Value == nil || string(ckv.Value) != value {
+	if ckv == nil || string(ckv.Value) != value {
 		err := markNamespace(c.leveldb, namespace)
 		if err != nil {
 			return err
 		}
-		return c.leveldb.Put(makeCurrentKey(namespace), []byte(value), nil)
+		key := makeCurrentKey(namespace)
+		return c.leveldb.Put(key, []byte(value), nil)
 	}
 	return nil
 }
 
-func (c *CanalDB) GetCurrent(namespace string) *KV {
-	iter := c.leveldb.NewIterator(&util.Range{
-		Start: []byte(makeCurrentKey(namespace)),
-		Limit: []byte(makeOriginKey(namespace)),
-	}, nil)
+func (c *CanalDB) searchEntriesWithPrefix(namespace string) iterator.Iterator {
+	return c.leveldb.NewIterator(util.BytesPrefix(makePrefix(namespace)), nil)
+}
 
-	if iter.Next() {
+func (c *CanalDB) GetCurrent(namespace string) *KV {
+	iter := c.searchEntriesWithPrefix(namespace)
+	if iter.Last() {
 		return &KV{iter.Key(), iter.Value()}
 	}
-
 	return nil
 }
 
