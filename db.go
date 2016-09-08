@@ -125,7 +125,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	return <-errChan
 }
 
-func (c *CanalDB) GetNamaspaces() [][]byte {
+func (c *CanalDB) GetNamespaces() [][]byte {
 	return fetchAllNamespaces(c.leveldb)
 }
 
@@ -133,7 +133,7 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
 
-	for _, namespace := range c.GetNamaspaces() {
+	for _, namespace := range c.GetNamespaces() {
 		wg.Add(1)
 		go func() {
 			err := c.Trim(string(namespace), boundary)

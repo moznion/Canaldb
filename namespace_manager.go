@@ -20,17 +20,13 @@ func markNamespace(leveldb *leveldb.DB, namespace string) error {
 }
 
 func fetchAllNamespaces(leveldb *leveldb.DB) [][]byte {
-	iter := leveldb.NewIterator(&util.Range{
-		Start: []byte(namespaceManagementKeyPrefix + "_"),
-		Limit: []byte(namespaceManagementKeyPrefix + "`"),
-	}, nil)
+	iter := leveldb.NewIterator(util.BytesPrefix([]byte(namespaceManagementKeyPrefix+"_")), nil)
+	defer iter.Release()
 
-	var namespaces [][]byte
+	namespaces := make([][]byte, 0)
 	for iter.Next() {
-		namespaces = append(
-			namespaces,
-			bytes.SplitN(iter.Key(), []byte("_"), 4)[3],
-		)
+		ns := copyBytes(bytes.SplitN(iter.Key(), []byte("_"), 4)[3])
+		namespaces = append(namespaces, ns)
 	}
 	return namespaces
 }

@@ -140,3 +140,35 @@ func TestGetRange(t *testing.T) {
 		t.Error()
 	}
 }
+
+func TestGetNamespaces(t *testing.T) {
+	leveldb := before(t)
+	defer leveldb.Close()
+
+	db := NewCanalDB(leveldb)
+
+	db.Put("test-namespace", "0")
+	db.Put("test-namespace", "1")
+	db.Put("test-namespace2", "")
+	db.Put("test-namespace3", "")
+	db.Put("many_many_underscores", "")
+
+	nss := db.GetNamespaces()
+	if len(nss) != 4 {
+		t.Error()
+	}
+
+	if !bytes.Equal(nss[0], []byte("many_many_underscores")) {
+		t.Error()
+	}
+	if !bytes.Equal(nss[1], []byte("test-namespace")) {
+		t.Error()
+	}
+	if !bytes.Equal(nss[2], []byte("test-namespace2")) {
+		t.Error()
+	}
+	if !bytes.Equal(nss[3], []byte("test-namespace3")) {
+		fmt.Println(string(nss[2]))
+		t.Error()
+	}
+}
