@@ -102,27 +102,41 @@ func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, 
 func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	iter := c.leveldb.NewIterator(&util.Range{
 		Start: []byte(makeOriginKey(namespace)),
-		Limit: []byte(makeKey(namespace, boundary)),
+		Limit: []byte(makeKey(namespace, boundary+1)), // +1: to include in the range
 	}, nil)
-	defer iter.Release()
 
 	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
+	var accErr error
 
 	for iter.Next() {
 		wg.Add(1)
-		go func() {
-			err := c.leveldb.Delete(iter.Key(), nil)
+		go func(key []byte) {
+			err := c.leveldb.Delete(key, nil)
 			if err != nil {
-				errChan <- err
+				accErr = err
 			}
 			wg.Done()
-		}()
+		}(cloneBytes(iter.Key()))
 	}
 
 	wg.Wait()
 
-	return <-errChan
+	iter.Last()
+	lastValue := iter.Value()
+	if lastValue != nil {
+		err := c.leveldb.Put(makeKey(namespace, boundary), lastValue, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	iter.Release()
+	err := iter.Error()
+	if err != nil {
+		return err
+	}
+
+	return accErr
 }
 
 func (c *CanalDB) GetNamespaces() [][]byte {

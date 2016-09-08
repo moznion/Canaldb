@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -169,6 +170,52 @@ func TestGetNamespaces(t *testing.T) {
 	}
 	if !bytes.Equal(nss[3], []byte("test-namespace3")) {
 		fmt.Println(string(nss[2]))
+		t.Error()
+	}
+}
+
+func TestTrim(t *testing.T) {
+	leveldb := before(t)
+	defer leveldb.Close()
+
+	db := NewCanalDB(leveldb)
+
+	_, err := db.Put("test-namespace", "0")
+	if err != nil {
+		t.Error(err)
+	}
+
+	time.Sleep(1 * time.Millisecond)
+	_, err = db.Put("test-namespace", "1")
+	if err != nil {
+		t.Error(err)
+	}
+
+	time.Sleep(1 * time.Millisecond)
+	targetKV, err := db.Put("test-namespace", "-1")
+	if err != nil {
+		t.Error(err)
+	}
+	targetKey := targetKV.Key
+	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("_"))[1]), 10, 64)
+
+	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(kvs) != 3 {
+		t.Error()
+	}
+
+	err = db.Trim("test-namespace", timestamp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	kvs = db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(kvs) != 1 {
+		t.Error()
+	}
+
+	kv := kvs[0]
+	if !bytes.Equal(kv.Key, targetKey) || !bytes.Equal(kv.Value, targetKV.Value) {
 		t.Error()
 	}
 }
