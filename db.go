@@ -18,16 +18,24 @@ func NewCanalDB(leveldb *leveldb.DB) *CanalDB {
 	}
 }
 
-func (c *CanalDB) Put(namespace string, value string) error {
+func (c *CanalDB) Put(namespace string, value string) (*KV, error) {
 	ckv := c.GetCurrent(namespace)
 	if ckv == nil || string(ckv.Value) != value {
-		err := markNamespace(c.leveldb, namespace)
+		var err error
+		err = markNamespace(c.leveldb, namespace)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return c.leveldb.Put(makeCurrentKey(namespace), []byte(value), nil)
+
+		k := makeCurrentKey(namespace)
+		v := []byte(value)
+		err = c.leveldb.Put(k, v, nil)
+		if err != nil {
+			return nil, err
+		}
+		return &KV{k, v}, nil
 	}
-	return nil
+	return ckv, nil
 }
 
 func (c *CanalDB) searchEntriesWithPrefix(namespace string) iterator.Iterator {
@@ -36,6 +44,7 @@ func (c *CanalDB) searchEntriesWithPrefix(namespace string) iterator.Iterator {
 
 func (c *CanalDB) GetCurrent(namespace string) *KV {
 	iter := c.searchEntriesWithPrefix(namespace)
+	defer iter.Release()
 	if iter.Last() {
 		return &KV{iter.Key(), iter.Value()}
 	}
@@ -58,6 +67,7 @@ func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, 
 		Start: makeKey(namespace, begin),
 		Limit: makeKey(namespace, end),
 	}, nil)
+	defer iter.Release()
 
 	var edgeJumper func() bool
 	var seeker func() bool
@@ -85,7 +95,6 @@ func (c *CanalDB) GetRange(namespace string, begin int64, end int64, num int64, 
 		}
 		kvs = append(kvs, KV{copyBytes(iter.Key()), copyBytes(iter.Value())})
 	}
-	iter.Release()
 
 	return kvs
 }
@@ -95,6 +104,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 		Start: []byte(makeOriginKey(namespace)),
 		Limit: []byte(makeKey(namespace, boundary)),
 	}, nil)
+	defer iter.Release()
 
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)

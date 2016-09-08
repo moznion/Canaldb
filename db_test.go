@@ -31,17 +31,17 @@ func TestPutAndGetCurrent(t *testing.T) {
 	var err error
 
 	db := NewCanalDB(leveldb)
-	err = db.Put("test-namespace", "0")
+	_, err = db.Put("test-namespace", "0")
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(1 * time.Millisecond)
-	err = db.Put("test-namespace", "1")
+	_, err = db.Put("test-namespace", "1")
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(1 * time.Millisecond)
-	err = db.Put("test-namespace", "-1")
+	_, err = db.Put("test-namespace", "-1")
 	if err != nil {
 		t.Error(err)
 	}
@@ -59,20 +59,28 @@ func TestPutWithDuplicatedValue(t *testing.T) {
 	var err error
 
 	db := NewCanalDB(leveldb)
-	err = db.Put("test-namespace", "0")
+	expected, err := db.Put("test-namespace", "0")
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(1 * time.Millisecond)
-	err = db.Put("test-namespace", "0")
+	_, err = db.Put("test-namespace", "0")
 	if err != nil {
 		t.Error(err)
 	}
 
 	iter := db.searchEntriesWithPrefix("test-namespace")
+	defer iter.Release()
+
 	cnt := 0
 	for iter.Next() {
 		cnt++
+		if !bytes.Equal(iter.Value(), expected.Value) {
+			t.Error()
+		}
+		if !bytes.Equal(iter.Key(), expected.Key) {
+			t.Error()
+		}
 	}
 	if cnt != 1 {
 		t.Error("Failed to prohibit duplicated value")
@@ -85,10 +93,14 @@ func TestGetRange(t *testing.T) {
 
 	db := NewCanalDB(leveldb)
 
+	putKVs := make([]KV, 0, 5)
 	for i := 1; i <= 5; i++ {
 		time.Sleep(1 * time.Millisecond)
-		db.Put("test-namespace", fmt.Sprintf("%d", i))
+		kv, _ := db.Put("test-namespace", fmt.Sprintf("%d", i))
+		putKVs = append(putKVs, *kv)
 	}
+	oldestKV := putKVs[0]
+	latestKV := putKVs[4]
 
 	var kvs []KV
 
@@ -97,10 +109,10 @@ func TestGetRange(t *testing.T) {
 	if len(kvs) != 5 {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[0].Value, []byte("1")) {
+	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[4].Value, []byte("5")) {
+	if !bytes.Equal(kvs[4].Key, latestKV.Key) || !bytes.Equal(kvs[4].Value, latestKV.Value) {
 		t.Error()
 	}
 
@@ -109,10 +121,10 @@ func TestGetRange(t *testing.T) {
 	if len(kvs) != 5 {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[0].Value, []byte("5")) {
+	if !bytes.Equal(kvs[0].Key, latestKV.Key) || !bytes.Equal(kvs[0].Value, latestKV.Value) {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[4].Value, []byte("1")) {
+	if !bytes.Equal(kvs[4].Key, oldestKV.Key) || !bytes.Equal(kvs[4].Value, oldestKV.Value) {
 		t.Error()
 	}
 
@@ -121,10 +133,10 @@ func TestGetRange(t *testing.T) {
 	if len(kvs) != 3 {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[0].Value, []byte("1")) {
+	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
 		t.Error()
 	}
-	if !bytes.Equal(kvs[2].Value, []byte("3")) {
+	if !bytes.Equal(kvs[2].Key, putKVs[2].Key) || !bytes.Equal(kvs[2].Value, putKVs[2].Value) {
 		t.Error()
 	}
 }
