@@ -25,8 +25,7 @@ func (c *CanalDB) Put(namespace string, value string) error {
 		if err != nil {
 			return err
 		}
-		key := makeCurrentKey(namespace)
-		return c.leveldb.Put(key, []byte(value), nil)
+		return c.leveldb.Put(makeCurrentKey(namespace), []byte(value), nil)
 	}
 	return nil
 }

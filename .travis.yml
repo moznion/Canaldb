@@ -1,0 +1,9 @@
+language: go
+go:
+  - 1.6
+  - 1.7
+  - tip
+install:
+  - go get github.com/syndtr/goleveldb/leveldb
+script: go test
+sudo: false
