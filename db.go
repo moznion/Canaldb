@@ -16,9 +16,9 @@ func NewCanalDB(leveldb *leveldb.DB) *CanalDB {
 	}
 }
 
-func (c *CanalDB) Put(namespace, value string) (*KV, error) {
-	ckv := c.GetCurrent(namespace)
-	if ckv == nil || string(ckv.Value) != value {
+func (c *CanalDB) Put(namespace, value string) (*Entry, error) {
+	currentEntry := c.GetCurrent(namespace)
+	if currentEntry == nil || string(currentEntry.Value) != value {
 		batch := new(leveldb.Batch)
 
 		markNamespace(batch, namespace)
@@ -30,32 +30,32 @@ func (c *CanalDB) Put(namespace, value string) (*KV, error) {
 		if err := c.leveldb.Write(batch, nil); err != nil {
 			return nil, err
 		}
-		return &KV{k, v}, nil
+		return &Entry{k, v, 0, nil}, nil // TODO
 	}
-	return ckv, nil
+	return currentEntry, nil
 }
 
 func (c *CanalDB) searchEntriesWithPrefix(namespace string) iterator.Iterator {
 	return c.leveldb.NewIterator(util.BytesPrefix(makePrefix(namespace)), nil)
 }
 
-func (c *CanalDB) GetCurrent(namespace string) *KV {
+func (c *CanalDB) GetCurrent(namespace string) *Entry {
 	iter := c.searchEntriesWithPrefix(namespace)
 	defer iter.Release()
 	if iter.Last() {
-		return &KV{iter.Key(), iter.Value()}
+		return &Entry{iter.Key(), iter.Value(), 0, nil} // TODO
 	}
 	return nil
 }
 
-func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) []KV {
+func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) []Entry {
 	isUnlimited := num < 0
 
-	var kvs []KV
+	var entries []Entry
 	if isUnlimited {
-		kvs = make([]KV, 0)
+		entries = make([]Entry, 0)
 	} else {
-		kvs = make([]KV, 0, num)
+		entries = make([]Entry, 0, num)
 	}
 
 	iter := c.leveldb.NewIterator(&util.Range{
@@ -79,7 +79,7 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 	if edgeJumper() {
 		i++
 		if isUnlimited || i <= num {
-			kvs = append(kvs, KV{cloneBytes(iter.Key()), cloneBytes(iter.Value())})
+			entries = append(entries, Entry{cloneBytes(iter.Key()), cloneBytes(iter.Value()), 0, nil}) // TODO
 		}
 	}
 
@@ -88,10 +88,10 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 		if !isUnlimited && i > num {
 			break
 		}
-		kvs = append(kvs, KV{cloneBytes(iter.Key()), cloneBytes(iter.Value())})
+		entries = append(entries, Entry{cloneBytes(iter.Key()), cloneBytes(iter.Value()), 0, nil}) // TODO
 	}
 
-	return kvs
+	return entries
 }
 
 func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) error {

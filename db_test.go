@@ -46,8 +46,8 @@ func TestPutAndGetCurrent(t *testing.T) {
 		t.Error(err)
 	}
 
-	kv := db.GetCurrent("test-namespace")
-	if !bytes.Equal(kv.Value, []byte("-1")) {
+	entry := db.GetCurrent("test-namespace")
+	if !bytes.Equal(entry.Value, []byte("-1")) {
 		t.Error("Failed putting")
 	}
 }
@@ -93,50 +93,50 @@ func TestGetRange(t *testing.T) {
 
 	db := NewCanalDB(leveldb)
 
-	putKVs := make([]KV, 0, 5)
+	putEntries := make([]Entry, 0, 5)
 	for i := 1; i <= 5; i++ {
 		time.Sleep(1 * time.Millisecond)
-		kv, _ := db.Put("test-namespace", fmt.Sprintf("%d", i))
-		putKVs = append(putKVs, *kv)
+		entry, _ := db.Put("test-namespace", fmt.Sprintf("%d", i))
+		putEntries = append(putEntries, *entry)
 	}
-	oldestKV := putKVs[0]
-	latestKV := putKVs[4]
+	oldestEntry := putEntries[0]
+	latestEntry := putEntries[4]
 
-	var kvs []KV
+	var entries []Entry
 
 	// ASC
-	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, false)
-	if len(kvs) != 5 {
+	entries = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, false)
+	if len(entries) != 5 {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
+	if !bytes.Equal(entries[0].Key, oldestEntry.Key) || !bytes.Equal(entries[0].Value, oldestEntry.Value) {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[4].Key, latestKV.Key) || !bytes.Equal(kvs[4].Value, latestKV.Value) {
+	if !bytes.Equal(entries[4].Key, latestEntry.Key) || !bytes.Equal(entries[4].Value, latestEntry.Value) {
 		t.Error("")
 	}
 
 	// DESC
-	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, true)
-	if len(kvs) != 5 {
+	entries = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, true)
+	if len(entries) != 5 {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[0].Key, latestKV.Key) || !bytes.Equal(kvs[0].Value, latestKV.Value) {
+	if !bytes.Equal(entries[0].Key, latestEntry.Key) || !bytes.Equal(entries[0].Value, latestEntry.Value) {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[4].Key, oldestKV.Key) || !bytes.Equal(kvs[4].Value, oldestKV.Value) {
+	if !bytes.Equal(entries[4].Key, oldestEntry.Key) || !bytes.Equal(entries[4].Value, oldestEntry.Value) {
 		t.Error("")
 	}
 
 	// LIMIT
-	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), 3, false)
-	if len(kvs) != 3 {
+	entries = db.GetRange("test-namespace", int64(0), getEpochMillis(), 3, false)
+	if len(entries) != 3 {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
+	if !bytes.Equal(entries[0].Key, oldestEntry.Key) || !bytes.Equal(entries[0].Value, oldestEntry.Value) {
 		t.Error("")
 	}
-	if !bytes.Equal(kvs[2].Key, putKVs[2].Key) || !bytes.Equal(kvs[2].Value, putKVs[2].Value) {
+	if !bytes.Equal(entries[2].Key, putEntries[2].Key) || !bytes.Equal(entries[2].Value, putEntries[2].Value) {
 		t.Error("")
 	}
 }
@@ -191,15 +191,15 @@ func TestTrim(t *testing.T) {
 	}
 
 	time.Sleep(1 * time.Millisecond)
-	targetKV, err := db.Put("test-namespace", "-1")
+	targetEntry, err := db.Put("test-namespace", "-1")
 	if err != nil {
 		t.Error(err)
 	}
-	targetKey := targetKV.Key
+	targetKey := targetEntry.Key
 	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("|"))[1]), 10, 64)
 
-	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
-	if len(kvs) != 3 {
+	entries := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(entries) != 3 {
 		t.Error("")
 	}
 
@@ -208,13 +208,13 @@ func TestTrim(t *testing.T) {
 		t.Error(err)
 	}
 
-	kvs = db.GetRange("test-namespace", int64(0), timestamp, -1, false)
-	if len(kvs) != 1 {
+	entries = db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(entries) != 1 {
 		t.Error("")
 	}
 
-	kv := kvs[0]
-	if !bytes.Equal(kv.Key, targetKey) || !bytes.Equal(kv.Value, targetKV.Value) {
+	entry := entries[0]
+	if !bytes.Equal(entry.Key, targetKey) || !bytes.Equal(entry.Value, targetEntry.Value) {
 		t.Error("")
 	}
 }
@@ -249,12 +249,12 @@ func TestTrimAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	targetKV, err := db.Put("test-namespace2", "2")
+	targetEntry, err := db.Put("test-namespace2", "2")
 	if err != nil {
 		t.Error(err)
 	}
 
-	targetKey := targetKV.Key
+	targetKey := targetEntry.Key
 	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("|"))[1]), 10, 64)
 
 	time.Sleep(1 * time.Millisecond)
@@ -272,23 +272,23 @@ func TestTrimAll(t *testing.T) {
 		t.Error(err)
 	}
 
-	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
-	if len(kvs) != 1 {
+	entries := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(entries) != 1 {
 		t.Error("Failed to trim all")
 	}
 
-	kvs = db.GetRange("test-namespace2", int64(0), timestamp, -1, false)
-	if len(kvs) != 1 {
+	entries = db.GetRange("test-namespace2", int64(0), timestamp, -1, false)
+	if len(entries) != 1 {
 		t.Error("Failed to trim all")
 	}
 
-	kv := db.GetCurrent("test-namespace")
-	if !bytes.Equal(kv.Value, []byte("3")) {
+	entry := db.GetCurrent("test-namespace")
+	if !bytes.Equal(entry.Value, []byte("3")) {
 		t.Error("")
 	}
 
-	kv = db.GetCurrent("test-namespace2")
-	if !bytes.Equal(kv.Value, []byte("3")) {
+	entry = db.GetCurrent("test-namespace2")
+	if !bytes.Equal(entry.Value, []byte("3")) {
 		t.Error("")
 	}
 }
