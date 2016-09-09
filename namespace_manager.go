@@ -21,7 +21,7 @@ func markNamespace(batch *leveldb.Batch, namespace string) {
 func fetchAllNamespaces(leveldb *leveldb.DB) ([][]byte, error) {
 	iter := leveldb.NewIterator(util.BytesPrefix([]byte(namespaceManagementKeyPrefix+"|")), nil)
 
-	namespaces := make([][]byte, 0)
+	var namespaces [][]byte
 	for iter.Next() {
 		ns := cloneBytes(bytes.SplitN(iter.Key(), []byte("|"), 3)[2])
 		namespaces = append(namespaces, ns)

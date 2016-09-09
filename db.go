@@ -144,12 +144,12 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 
 	for _, namespace := range namespaces {
 		wg.Add(1)
-		go func() {
+		go func(namespace []byte) {
 			if err := c.Trim(string(namespace), boundary); err != nil {
 				errChan <- err
 			}
 			wg.Done()
-		}()
+		}(namespace)
 	}
 
 	wg.Wait()

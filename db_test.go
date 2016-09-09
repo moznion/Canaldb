@@ -76,10 +76,10 @@ func TestPutWithDuplicatedValue(t *testing.T) {
 	for iter.Next() {
 		cnt++
 		if !bytes.Equal(iter.Value(), expected.Value) {
-			t.Error()
+			t.Error("")
 		}
 		if !bytes.Equal(iter.Key(), expected.Key) {
-			t.Error()
+			t.Error("")
 		}
 	}
 	if cnt != 1 {
@@ -107,37 +107,37 @@ func TestGetRange(t *testing.T) {
 	// ASC
 	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, false)
 	if len(kvs) != 5 {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[4].Key, latestKV.Key) || !bytes.Equal(kvs[4].Value, latestKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 
 	// DESC
 	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), -1, true)
 	if len(kvs) != 5 {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[0].Key, latestKV.Key) || !bytes.Equal(kvs[0].Value, latestKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[4].Key, oldestKV.Key) || !bytes.Equal(kvs[4].Value, oldestKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 
 	// LIMIT
 	kvs = db.GetRange("test-namespace", int64(0), getEpochMillis(), 3, false)
 	if len(kvs) != 3 {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[0].Key, oldestKV.Key) || !bytes.Equal(kvs[0].Value, oldestKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(kvs[2].Key, putKVs[2].Key) || !bytes.Equal(kvs[2].Value, putKVs[2].Value) {
-		t.Error()
+		t.Error("")
 	}
 }
 
@@ -155,21 +155,21 @@ func TestGetNamespaces(t *testing.T) {
 
 	nss, _ := db.GetNamespaces()
 	if len(nss) != 4 {
-		t.Error()
+		t.Error("")
 	}
 
 	if !bytes.Equal(nss[0], []byte("many|many|pipes")) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(nss[1], []byte("test-namespace")) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(nss[2], []byte("test-namespace2")) {
-		t.Error()
+		t.Error("")
 	}
 	if !bytes.Equal(nss[3], []byte("test-namespace3")) {
 		fmt.Println(string(nss[2]))
-		t.Error()
+		t.Error("")
 	}
 }
 
@@ -200,7 +200,7 @@ func TestTrim(t *testing.T) {
 
 	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
 	if len(kvs) != 3 {
-		t.Error()
+		t.Error("")
 	}
 
 	err = db.Trim("test-namespace", timestamp)
@@ -210,11 +210,11 @@ func TestTrim(t *testing.T) {
 
 	kvs = db.GetRange("test-namespace", int64(0), timestamp, -1, false)
 	if len(kvs) != 1 {
-		t.Error()
+		t.Error("")
 	}
 
 	kv := kvs[0]
 	if !bytes.Equal(kv.Key, targetKey) || !bytes.Equal(kv.Value, targetKV.Value) {
-		t.Error()
+		t.Error("")
 	}
 }
