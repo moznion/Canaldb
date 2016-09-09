@@ -96,7 +96,7 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 	return kvs
 }
 
-func (c *CanalDB) Trim(namespace string, boundary int64) error {
+func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) error {
 	iter := c.leveldb.NewIterator(&util.Range{
 		Start: []byte(makeOriginKey(namespace)),
 		Limit: []byte(makeKey(namespace, boundary+1)), // +1: to include in the range
@@ -104,7 +104,6 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 
 	var wg sync.WaitGroup
 
-	batch := new(leveldb.Batch)
 	for iter.Next() {
 		wg.Add(1)
 		go func(key []byte) {
@@ -126,6 +125,15 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *CanalDB) Trim(namespace string, boundary int64) error {
+	batch := new(leveldb.Batch)
+	if err := c.trim(batch, namespace, boundary); err != nil {
+		return err
+	}
+
 	return c.leveldb.Write(batch, nil)
 }
 
@@ -135,18 +143,20 @@ func (c *CanalDB) GetNamespaces() ([][]byte, error) {
 
 func (c *CanalDB) TrimAll(boundary int64) error {
 	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
 
 	namespaces, err := c.GetNamespaces()
 	if err != nil {
 		return err
 	}
 
+	var accumulatedErr error
+
+	batch := new(leveldb.Batch)
 	for _, namespace := range namespaces {
 		wg.Add(1)
 		go func(namespace []byte) {
-			if err := c.Trim(string(namespace), boundary); err != nil {
-				errChan <- err
+			if err := c.trim(batch, string(namespace), boundary); err != nil {
+				accumulatedErr = err
 			}
 			wg.Done()
 		}(namespace)
@@ -154,5 +164,9 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 
 	wg.Wait()
 
-	return <-errChan
+	if accumulatedErr != nil {
+		return accumulatedErr
+	}
+
+	return c.leveldb.Write(batch, nil)
 }

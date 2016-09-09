@@ -218,3 +218,77 @@ func TestTrim(t *testing.T) {
 		t.Error("")
 	}
 }
+
+func TestTrimAll(t *testing.T) {
+	leveldb := before(t)
+	defer leveldb.Close()
+
+	db := NewCanalDB(leveldb)
+
+	_, err := db.Put("test-namespace", "0")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = db.Put("test-namespace2", "0")
+	if err != nil {
+		t.Error(err)
+	}
+
+	time.Sleep(1 * time.Millisecond)
+	_, err = db.Put("test-namespace", "1")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = db.Put("test-namespace2", "1")
+	if err != nil {
+		t.Error(err)
+	}
+
+	time.Sleep(1 * time.Millisecond)
+	_, err = db.Put("test-namespace", "2")
+	if err != nil {
+		t.Error(err)
+	}
+	targetKV, err := db.Put("test-namespace2", "2")
+	if err != nil {
+		t.Error(err)
+	}
+
+	targetKey := targetKV.Key
+	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("|"))[1]), 10, 64)
+
+	time.Sleep(1 * time.Millisecond)
+	_, err = db.Put("test-namespace", "3")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = db.Put("test-namespace2", "3")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = db.TrimAll(timestamp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
+	if len(kvs) != 1 {
+		t.Error("Failed to trim all")
+	}
+
+	kvs = db.GetRange("test-namespace2", int64(0), timestamp, -1, false)
+	if len(kvs) != 1 {
+		t.Error("Failed to trim all")
+	}
+
+	kv := db.GetCurrent("test-namespace")
+	if !bytes.Equal(kv.Value, []byte("3")) {
+		t.Error("")
+	}
+
+	kv = db.GetCurrent("test-namespace2")
+	if !bytes.Equal(kv.Value, []byte("3")) {
+		t.Error("")
+	}
+}
