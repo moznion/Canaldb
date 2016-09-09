@@ -60,11 +60,9 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 		kvs = make([]KV, 0, num)
 	}
 
-	end++ // to include in the rarnge
-
 	iter := c.leveldb.NewIterator(&util.Range{
 		Start: makeKey(namespace, begin),
-		Limit: makeKey(namespace, end),
+		Limit: makeKey(namespace, end+1), // +1: to include in the rarnge
 	}, nil)
 	defer iter.Release()
 
