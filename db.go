@@ -30,7 +30,9 @@ func (c *CanalDB) Put(namespace, value string) (*Entry, error) {
 		if err := c.leveldb.Write(batch, nil); err != nil {
 			return nil, err
 		}
-		return &Entry{k, v, 0, nil}, nil // TODO
+
+		ns, ts := splitKey(k)
+		return &Entry{k, v, ts, ns}, nil
 	}
 	return currentEntry, nil
 }
@@ -43,7 +45,9 @@ func (c *CanalDB) GetCurrent(namespace string) *Entry {
 	iter := c.searchEntriesWithPrefix(namespace)
 	defer iter.Release()
 	if iter.Last() {
-		return &Entry{iter.Key(), iter.Value(), 0, nil} // TODO
+		k := iter.Key()
+		ns, ts := splitKey(k)
+		return &Entry{k, iter.Value(), ts, ns}
 	}
 	return nil
 }
@@ -79,7 +83,9 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 	if edgeJumper() {
 		i++
 		if isUnlimited || i <= num {
-			entries = append(entries, Entry{cloneBytes(iter.Key()), cloneBytes(iter.Value()), 0, nil}) // TODO
+			k := cloneBytes(iter.Key())
+			ns, ts := splitKey(k)
+			entries = append(entries, Entry{k, cloneBytes(iter.Value()), ts, ns})
 		}
 	}
 
@@ -88,7 +94,10 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 		if !isUnlimited && i > num {
 			break
 		}
-		entries = append(entries, Entry{cloneBytes(iter.Key()), cloneBytes(iter.Value()), 0, nil}) // TODO
+
+		k := cloneBytes(iter.Key())
+		ns, ts := splitKey(k)
+		entries = append(entries, Entry{k, cloneBytes(iter.Value()), ts, ns})
 	}
 
 	return entries
