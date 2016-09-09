@@ -45,6 +45,33 @@ Result:
 | ns_1473320409405         | buz     | Truncate and put the latest value on boundary |
 | ns_1473320409410         | qux     | As it is                                      |
 
+Example
+--
+
+```go
+import "github.com/syndtr/goleveldb/leveldb"
+
+func main() {
+	leveldb, _ := leveldb.OpenFile("db", nil)
+	defer leveldb.Close()
+	db := NewCanalDB(leveldb)
+
+	entry1, _ := db.Put("namespace", "1")
+	entry2, _ := db.Put("namespace", "2")
+	entry3, _ := db.Put("namespace", "3")
+
+	db.GetCurrent("namespace") // => namespace:3
+
+	db.GetRange("namespace", entry1.Timestamp, entry3.Timestamp, -1, false) // => namespace:1, namespace:2, namespace:3
+	db.GetRange("namespace", entry1.Timestamp, entry3.Timestamp, -1, true)  // => namespace:3, namespace:2, namespace:1
+	db.GetRange("namespace", entry1.Timestamp, entry3.Timestamp, 1, false)  // => namespace:1
+	db.GetRange("namespace", entry2.Timestamp, entry3.Timestamp, -1, false) // => namespace:2, namespace:3
+
+	db.Trim("namespace", entry3.Timestamp) // => Trim db
+	db.GetRange("namespace", entry1.Timestamp, entry3.Timestamp, -1, false) // => namespace:3
+}
+```
+
 Author
 --
 

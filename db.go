@@ -52,7 +52,7 @@ func (c *CanalDB) GetCurrent(namespace string) *Entry {
 	return nil
 }
 
-func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) []Entry {
+func (c *CanalDB) GetRange(namespace string, beginMillis, endMillis, num int64, desc bool) []Entry {
 	isUnlimited := num < 0
 
 	var entries []Entry
@@ -63,8 +63,8 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 	}
 
 	iter := c.leveldb.NewIterator(&util.Range{
-		Start: makeKey(namespace, begin),
-		Limit: makeKey(namespace, end+1), // +1: to include in the rarnge
+		Start: makeKey(namespace, beginMillis),
+		Limit: makeKey(namespace, endMillis+1), // +1: to include in the rarnge
 	}, nil)
 	defer iter.Release()
 
@@ -103,10 +103,10 @@ func (c *CanalDB) GetRange(namespace string, begin, end, num int64, desc bool) [
 	return entries
 }
 
-func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) error {
+func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundaryMillis int64) error {
 	iter := c.leveldb.NewIterator(&util.Range{
 		Start: []byte(makeOriginKey(namespace)),
-		Limit: []byte(makeKey(namespace, boundary+1)), // +1: to include in the range
+		Limit: []byte(makeKey(namespace, boundaryMillis+1)), // +1: to include in the range
 	}, nil)
 
 	for iter.Next() {
@@ -116,7 +116,7 @@ func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) e
 	iter.Last()
 	lastValue := iter.Value()
 	if lastValue != nil {
-		batch.Put(makeKey(namespace, boundary), lastValue)
+		batch.Put(makeKey(namespace, boundaryMillis), lastValue)
 	}
 
 	iter.Release()
@@ -127,9 +127,9 @@ func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) e
 	return nil
 }
 
-func (c *CanalDB) Trim(namespace string, boundary int64) error {
+func (c *CanalDB) Trim(namespace string, boundaryMillis int64) error {
 	batch := new(leveldb.Batch)
-	if err := c.trim(batch, namespace, boundary); err != nil {
+	if err := c.trim(batch, namespace, boundaryMillis); err != nil {
 		return err
 	}
 
@@ -140,7 +140,7 @@ func (c *CanalDB) GetNamespaces() ([][]byte, error) {
 	return fetchAllNamespaces(c.leveldb)
 }
 
-func (c *CanalDB) TrimAll(boundary int64) error {
+func (c *CanalDB) TrimAll(boundaryMillis int64) error {
 	namespaces, err := c.GetNamespaces()
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 
 	batch := new(leveldb.Batch)
 	for _, namespace := range namespaces {
-		if err := c.trim(batch, string(namespace), boundary); err != nil {
+		if err := c.trim(batch, string(namespace), boundaryMillis); err != nil {
 			return err
 		}
 	}
