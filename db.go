@@ -1,8 +1,6 @@
 package canaldb
 
 import (
-	"sync"
-
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -102,17 +100,9 @@ func (c *CanalDB) trim(batch *leveldb.Batch, namespace string, boundary int64) e
 		Limit: []byte(makeKey(namespace, boundary+1)), // +1: to include in the range
 	}, nil)
 
-	var wg sync.WaitGroup
-
 	for iter.Next() {
-		wg.Add(1)
-		go func(key []byte) {
-			batch.Delete(key)
-			wg.Done()
-		}(cloneBytes(iter.Key()))
+		batch.Delete(cloneBytes(iter.Key()))
 	}
-
-	wg.Wait()
 
 	iter.Last()
 	lastValue := iter.Value()
@@ -142,30 +132,16 @@ func (c *CanalDB) GetNamespaces() ([][]byte, error) {
 }
 
 func (c *CanalDB) TrimAll(boundary int64) error {
-	var wg sync.WaitGroup
-
 	namespaces, err := c.GetNamespaces()
 	if err != nil {
 		return err
 	}
 
-	var accumulatedErr error
-
 	batch := new(leveldb.Batch)
 	for _, namespace := range namespaces {
-		wg.Add(1)
-		go func(namespace []byte) {
-			if err := c.trim(batch, string(namespace), boundary); err != nil {
-				accumulatedErr = err
-			}
-			wg.Done()
-		}(namespace)
-	}
-
-	wg.Wait()
-
-	if accumulatedErr != nil {
-		return accumulatedErr
+		if err := c.trim(batch, string(namespace), boundary); err != nil {
+			return err
+		}
 	}
 
 	return c.leveldb.Write(batch, nil)
