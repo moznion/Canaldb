@@ -37,7 +37,8 @@ func splitKey(k []byte) ([]byte, int64) {
 	sep := []byte("|")
 
 	split := bytes.Split(k, sep)
-	// return split[0], int64(binary.LittleEndian.Uint64(split[1]))
-	ts, _ := strconv.ParseInt(string(split[len(split)-1]), 10, 64)
-	return bytes.Join(split[:len(split)-1], sep), ts
+	splitLen := len(split)
+
+	ts, _ := strconv.ParseInt(string(split[splitLen-1]), 10, 64)
+	return bytes.Join(split[:splitLen-1], sep), ts
 }
