@@ -6,11 +6,11 @@ import (
 )
 
 func makePrefix(identifier string) []byte {
-	return []byte(identifier + "_")
+	return []byte(identifier + "|")
 }
 
 func makeKey(identifier string, timestamp int64) []byte {
-	return []byte(fmt.Sprintf("%s_%d", identifier, timestamp))
+	return []byte(fmt.Sprintf("%s|%d", identifier, timestamp))
 }
 
 func makeCurrentKey(identifier string) []byte {

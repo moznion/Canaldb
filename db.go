@@ -131,7 +131,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	return c.leveldb.Write(batch, nil)
 }
 
-func (c *CanalDB) GetNamespaces() [][]byte {
+func (c *CanalDB) GetNamespaces() ([][]byte, error) {
 	return fetchAllNamespaces(c.leveldb)
 }
 
@@ -139,7 +139,12 @@ func (c *CanalDB) TrimAll(boundary int64) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
 
-	for _, namespace := range c.GetNamespaces() {
+	namespaces, err := c.GetNamespaces()
+	if err != nil {
+		return err
+	}
+
+	for _, namespace := range namespaces {
 		wg.Add(1)
 		go func() {
 			if err := c.Trim(string(namespace), boundary); err != nil {

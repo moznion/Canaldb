@@ -8,24 +8,28 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
-const namespaceManagementKeyPrefix string = "_canaldb_namespaces"
+const namespaceManagementKeyPrefix string = "_canaldb|namespaces"
 const nsManagementMarker string = "1"
 
 func markNamespace(batch *leveldb.Batch, namespace string) {
 	batch.Put(
-		[]byte(fmt.Sprintf(namespaceManagementKeyPrefix+"_%s", namespace)),
+		[]byte(fmt.Sprintf(namespaceManagementKeyPrefix+"|%s", namespace)),
 		[]byte(nsManagementMarker),
 	)
 }
 
-func fetchAllNamespaces(leveldb *leveldb.DB) [][]byte {
-	iter := leveldb.NewIterator(util.BytesPrefix([]byte(namespaceManagementKeyPrefix+"_")), nil)
-	defer iter.Release()
+func fetchAllNamespaces(leveldb *leveldb.DB) ([][]byte, error) {
+	iter := leveldb.NewIterator(util.BytesPrefix([]byte(namespaceManagementKeyPrefix+"|")), nil)
 
 	namespaces := make([][]byte, 0)
 	for iter.Next() {
-		ns := cloneBytes(bytes.SplitN(iter.Key(), []byte("_"), 4)[3])
+		ns := cloneBytes(bytes.SplitN(iter.Key(), []byte("|"), 3)[2])
 		namespaces = append(namespaces, ns)
 	}
-	return namespaces
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		return nil, err
+	}
+
+	return namespaces, nil
 }

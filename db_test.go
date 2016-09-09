@@ -151,14 +151,14 @@ func TestGetNamespaces(t *testing.T) {
 	db.Put("test-namespace", "1")
 	db.Put("test-namespace2", "")
 	db.Put("test-namespace3", "")
-	db.Put("many_many_underscores", "")
+	db.Put("many|many|pipes", "")
 
-	nss := db.GetNamespaces()
+	nss, _ := db.GetNamespaces()
 	if len(nss) != 4 {
 		t.Error()
 	}
 
-	if !bytes.Equal(nss[0], []byte("many_many_underscores")) {
+	if !bytes.Equal(nss[0], []byte("many|many|pipes")) {
 		t.Error()
 	}
 	if !bytes.Equal(nss[1], []byte("test-namespace")) {
@@ -196,7 +196,7 @@ func TestTrim(t *testing.T) {
 		t.Error(err)
 	}
 	targetKey := targetKV.Key
-	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("_"))[1]), 10, 64)
+	timestamp, _ := strconv.ParseInt(string(bytes.Split(targetKey, []byte("|"))[1]), 10, 64)
 
 	kvs := db.GetRange("test-namespace", int64(0), timestamp, -1, false)
 	if len(kvs) != 3 {
