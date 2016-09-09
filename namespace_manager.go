@@ -11,11 +11,10 @@ import (
 const namespaceManagementKeyPrefix string = "_canaldb_namespaces"
 const nsManagementMarker string = "1"
 
-func markNamespace(leveldb *leveldb.DB, namespace string) error {
-	return leveldb.Put(
+func markNamespace(batch *leveldb.Batch, namespace string) {
+	batch.Put(
 		[]byte(fmt.Sprintf(namespaceManagementKeyPrefix+"_%s", namespace)),
 		[]byte(nsManagementMarker),
-		nil,
 	)
 }
 

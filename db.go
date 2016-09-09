@@ -21,13 +21,15 @@ func NewCanalDB(leveldb *leveldb.DB) *CanalDB {
 func (c *CanalDB) Put(namespace, value string) (*KV, error) {
 	ckv := c.GetCurrent(namespace)
 	if ckv == nil || string(ckv.Value) != value {
-		if err := markNamespace(c.leveldb, namespace); err != nil {
-			return nil, err
-		}
+		batch := new(leveldb.Batch)
+
+		markNamespace(batch, namespace)
 
 		k := makeCurrentKey(namespace)
 		v := []byte(value)
-		if err := c.leveldb.Put(k, v, nil); err != nil {
+		batch.Put(k, v)
+
+		if err := c.leveldb.Write(batch, nil); err != nil {
 			return nil, err
 		}
 		return &KV{k, v}, nil
@@ -103,14 +105,12 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	}, nil)
 
 	var wg sync.WaitGroup
-	var accErr error
 
+	batch := new(leveldb.Batch)
 	for iter.Next() {
 		wg.Add(1)
 		go func(key []byte) {
-			if err := c.leveldb.Delete(key, nil); err != nil {
-				accErr = err
-			}
+			batch.Delete(key)
 			wg.Done()
 		}(cloneBytes(iter.Key()))
 	}
@@ -120,9 +120,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 	iter.Last()
 	lastValue := iter.Value()
 	if lastValue != nil {
-		if err := c.leveldb.Put(makeKey(namespace, boundary), lastValue, nil); err != nil {
-			return err
-		}
+		batch.Put(makeKey(namespace, boundary), lastValue)
 	}
 
 	iter.Release()
@@ -130,7 +128,7 @@ func (c *CanalDB) Trim(namespace string, boundary int64) error {
 		return err
 	}
 
-	return accErr
+	return c.leveldb.Write(batch, nil)
 }
 
 func (c *CanalDB) GetNamespaces() [][]byte {
